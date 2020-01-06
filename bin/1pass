@@ -7,7 +7,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import onepassword.cli
 
 try:
-    onepassword.cli.CLI().run()
+    if sys.argv[1] == 'get':
+        onepassword.cli.CLIGet(arguments=sys.argv[2:]).run()
+
+    if sys.argv[1] == 'list':
+        onepassword.cli.CLIList(arguments=sys.argv[2:]).run()
+
 except Exception as e:
-    sys.stderr.write("1pass: Error: %s\n" % e.message)
+    sys.stderr.write("1pass: Error: %s\n" % e)
     sys.exit(1)

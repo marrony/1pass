@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import functools
 from fuzzywuzzy import process
 
@@ -99,6 +100,7 @@ class KeychainItem(object):
         self.identifier = identifier
         self.name = name
         self.password = None
+        self.urls = []
         self._path = path
         self._type = type
 
@@ -116,17 +118,24 @@ class KeychainItem(object):
             security_level=self.security_level,
         )
         encrypted_json = self._lazily_load("_encrypted_json")
-        decrypted_json = key.decrypt(self._encrypted_json)
+        decrypted_json = key.decrypt(self._encrypted_json).strip()
 
         if isinstance(decrypted_json, bytes):
-            decrypted_json = decrypted_json.decode('utf-8')
+            decrypted_json = decrypted_json.decode('utf-8', 'strict')
 
+        #sys.stderr.write("%s - %s (%s)\n" % (self.identifier, len(decrypted_json), decrypted_json))
         self._data = json.loads(decrypted_json)
         self.password = self._find_password()
+        self.urls = self._find_urls()
 
     def _find_password(self):
         raise Exception("Cannot extract a password from this type of"
                         " keychain item (%s)" % self._type)
+
+    def _find_urls(self):
+        #if self._data["URLs"] is not None:
+        #    return [v["url"] for v in self._data["URLs"]]
+        return []
 
     def _lazily_load(self, attr):
         if not hasattr(self, attr):
@@ -139,9 +148,12 @@ class KeychainItem(object):
         with open(path, "r") as f:
             item_data = json.load(f)
 
-        self._key_identifier = item_data.get("keyID")
+        self._key_identifier = item_data.get("keyID") or item_data.get("uuid")
         self._security_level = item_data.get("securityLevel")
         self._encrypted_json = item_data["encrypted"]
+
+    def __str__(self):
+        return json.dumps(self._data)
 
 
 class WebFormKeychainItem(KeychainItem):
